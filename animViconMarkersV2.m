@@ -2,10 +2,17 @@ function [hFig ] = animViconMarkersV2( varargin )
 %ANIMVICONMARKERS quickly visualise the vicon markers
 %   ANIMVICONMARKERS( markerData, markerSet )
 %   Inputs::
-%       markerData - see 'importViconMarkers.m' 
+%       markerData     - struct with fields:
+%               .Names - a 'containers.Map' java object whose keys are the
+%                        marker names, and whose values denote the columns
+%                        in the (.Pos) matrix denote the co-ordinates in R3
+%                        of the markers (units in mm)
+%               .Pos   - a matrix containing the 3D co-ordinates of each
+%                        marker
 %
-%       markerSet - see 'averageMarkerDistances.m'
+%       markerSet - cell array of size [n_rows, 2 columns]
 %
+%       markerSetColour - cell array of colour markers, e.g., {'b';'r';'g'}
 % 
 %   Example usage:
 %       animViconMarkers('markerData',markerData,'markerSet',markerSet)
