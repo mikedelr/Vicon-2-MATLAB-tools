@@ -1,4 +1,4 @@
-function markers = importViconMarkers(varargin)
+function markerData = importViconMarkers(varargin)
 %IMPORTVICONMARKERS Import numeric data from a text file as a matrix.
 %   viconMarkerData = importViconMarkers(path2file,markerNames)
 %   NB:This function opens and closes the file twice, the first time to 
@@ -10,15 +10,17 @@ function markers = importViconMarkers(varargin)
 %       'markerNames' - cell array containing the names of the markers to
 %                       look for
 %   Outpurs::
-%       markers - struct with fields:
+%       markerData     - struct with fields:
 %               .Names - a 'containers.Map' java object whose keys are the
 %                        marker names, and whose values denote the columns
 %                        in the (.Pos) matrix denote the co-ordinates in R3
 %                        of the markers (units in mm)
-%               .Pos   - a matrix containing the 3D co-ordinates of
+%               .Pos   - a matrix containing the 3D co-ordinates of each
+%                        marker
+%               
 %
 %   Example usage::
-%   [markers]=importViconMarkers('path2file',path2file,'markerNames',markerNames,'bGaps',bGaps)
+%   [markerData] = importViconMarkers('path2file',path2file,'markerNames',markerNames,'bGaps',bGaps)
 %% -------- User Specifies Input args --------------------
 bGaps = false;
 for i=1:2:nargin
@@ -97,25 +99,25 @@ for i=1:numIndexesToFind
 end
 
 %% Create output variable
-markers        = struct;
-markers.Pos    = MarkerPositions;
-markers.Names  = mapMarkerNames;
+markerData        = struct;
+markerData.Pos    = MarkerPositions;
+markerData.Names  = mapMarkerNames;
 
 if bGaps
-    [markers]=identifyGapsAndPad(markers,markerNames);
+    [markerData]=identifyGapsAndPad(markerData,markerNames);
 end
 end
 
-function [markers]=identifyGapsAndPad(markers,markerNames)
+function [markerData]=identifyGapsAndPad(markerData,markerNames)
     % add additional fields to structure for use without performing gap filling
-    markers.GapMarkers = mapMarkerNames.keys; % same fields as markers.Names.keys but sort order is different
+    markerData.GapMarkers = mapMarkerNames.keys; % same fields as markers.Names.keys but sort order is different
     %% ----------- .GapsFilled - logical array denoting frames where markers
     % have dropped out
-    [NUM_FRAMES,~] = size(markers.Pos);
-    NUM_MARKERS = length(markers.GapMarkers);
+    [NUM_FRAMES,~] = size(markerData.Pos);
+    NUM_MARKERS = length(markerData.GapMarkers);
     markerGaps = false(NUM_FRAMES,NUM_MARKERS); % assume no gaps initially
     for frameNum=1:NUM_FRAMES
-        currFrame = markers.Pos(frameNum,:);
+        currFrame = markerData.Pos(frameNum,:);
         for m=1:NUM_MARKERS                  
             currMarker=mapMarkerNames(markerNames{m});
             if isnan(currFrame(currMarker));   
@@ -123,12 +125,12 @@ function [markers]=identifyGapsAndPad(markers,markerNames)
             end
         end
     end
-    markers.GapsFilled = markerGaps;  
-    markers.GapsPerFrame = sum(markerGaps,2);
-    markers.GapFrames = find(markers.GapsPerFrame~=0);
+    markerData.GapsFilled = markerGaps;  
+    markerData.GapsPerFrame = sum(markerGaps,2);
+    markerData.GapFrames = find(markerData.GapsPerFrame~=0);
 
     % Visual check if missing frames
-    vFrames = markers.Pos(:,1);
+    vFrames = markerData.Pos(:,1);
     frameDiff = vFrames(2:end) - vFrames(1:end-1);
     fhand = figure('name','Check difference of subsequent frames: ');
     plot(frameDiff);
@@ -143,29 +145,29 @@ function [markers]=identifyGapsAndPad(markers,markerNames)
         missFrameIdx(vFrames) = false; % missing frames true, present frames false
         % --- Copy gapFillData to a new struct where missing frames now contain NaN
         markersNanPadData            = struct;
-        markersNanPadData.Names      = markers.Names;
-        markersNanPadData.GapMarkers = markers.GapMarkers;
+        markersNanPadData.Names      = markerData.Names;
+        markersNanPadData.GapMarkers = markerData.GapMarkers;
         %  --- copy .Pos
-        oldPos                  = markers.Pos;
+        oldPos                  = markerData.Pos;
         [~,COLS]                = size(oldPos);
         newPos                  = [realFrames,zeros(NUM_REAL_FRAMES,1),NaN(NUM_REAL_FRAMES,COLS-2)];
         newPos(~missFrameIdx,:) = oldPos;
         markersNanPadData.Pos   = newPos;
         %  --- copy .GapsFilled
-        oldGapsFilled                  = markers.GapsFilled;
+        oldGapsFilled                  = markerData.GapsFilled;
         [~,COLS2]                      = size(oldGapsFilled);
         newGapsFilled                  = NaN(NUM_REAL_FRAMES,COLS2);
         newGapsFilled(~missFrameIdx,:) = oldGapsFilled;
         markersNanPadData.GapsFilled        = newGapsFilled;
         %  --- copy .GapFrames
-        markersNanPadData.GapFrames        = markers.GapFrames;
+        markersNanPadData.GapFrames        = markerData.GapFrames;
         %  --- copy .GapsPerFrame
-        oldGapsPerFrame                  = markers.GapsPerFrame;
+        oldGapsPerFrame                  = markerData.GapsPerFrame;
         [~,COLS4]                        = size(oldGapsPerFrame);
         newGapsPerFrame                  = NaN(NUM_REAL_FRAMES,COLS4);
         newGapsPerFrame(~missFrameIdx,:) = oldGapsPerFrame;
         markersNanPadData.GapsPerFrame   = newGapsPerFrame;
 
-        markers = markersNanPadData; % replace original gapFillData struct with Nan padded equivalent
+        markerData = markersNanPadData; % replace original gapFillData struct with Nan padded equivalent
     end
 end
